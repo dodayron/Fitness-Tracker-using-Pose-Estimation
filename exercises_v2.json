@@ -1,0 +1,31 @@
+{
+  "squat": {
+    "name": "Squat",
+    "angle_points": ["HIP", "KNEE", "ANKLE"],
+    "sides": ["left", "right"],
+    "thresholds": {
+      "rest": 160,
+      "peak": 90
+    }
+  },
+
+  "curl_right": {
+    "name": "Right Arm Curl",
+    "angle_points": ["SHOULDER", "ELBOW", "WRIST"],
+    "sides": ["right"],
+    "thresholds": {
+      "rest": 160,
+      "peak": 45
+    }
+  },
+  
+  "curl_left": {
+    "name": "Left Arm Curl",
+    "angle_points": ["SHOULDER", "ELBOW", "WRIST"],
+    "sides": ["left"],
+    "thresholds": {
+      "rest": 160,
+      "peak": 45
+    }
+  }
+}

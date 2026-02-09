@@ -1,0 +1,23 @@
+{
+  "squat": {
+    "name": "Squat",
+    "angle_points": ["HIP", "KNEE", "ANKLE"],
+    "sides": ["left", "right"],
+    "thresholds": {
+      "up": 150,
+      "down": 95
+    },
+    "start_stage": "start"
+  },
+
+  "curl_right": {
+    "name": "Right Arm Curl",
+    "angle_points": ["SHOULDER", "ELBOW", "WRIST"],
+    "sides": ["right"],
+    "thresholds": {
+      "up": 90,
+      "down": 155
+    },
+    "start_stage": "down"
+  }
+}

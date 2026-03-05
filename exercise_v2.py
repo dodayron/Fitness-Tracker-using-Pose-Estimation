@@ -25,8 +25,8 @@ class Exercise:
         b = np.array([b.x, b.y])
         c = np.array([c.x, c.y])
 
-        radians = np.arctan2(c[1]-b[1], c[0]-b[0]) - \
-                  np.arctan2(a[1]-b[1], a[0]-b[0])
+        radians = (np.arctan2(c[1]-b[1], c[0]-b[0]) - 
+                  np.arctan2(a[1]-b[1], a[0]-b[0]))
         angle = abs(radians * 180.0 / np.pi)
         
         if angle > 180.0:

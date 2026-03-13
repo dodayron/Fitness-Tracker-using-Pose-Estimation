@@ -4,8 +4,14 @@ import mediapipe as mp
 import numpy as np
 import time
 
-# CHANGE: Importing from the v2 loader
+from datetime import datetime
+from database import insert_session
+
+import sound_manager
+
+# Importing from the v2 loader and LED manager
 from exercise_loader_v2 import load_exercise
+from led_manager import LEDManager
 
 # Initialize MediaPipe
 mp_pose = mp.solutions.pose
@@ -14,11 +20,21 @@ mp_draw = mp.solutions.drawing_utils
 # Load Initial Exercise
 current_exercise = load_exercise("squat")
 
+# track previous reps
+previous_reps = 0;
+
+# Initialise session_start so the first save works
+session_start = datetime.now()
+
 # Setup Camera (RPi)
 picam2 = Picamera2()
 config = picam2.create_preview_configuration(main={"format": "BGR888", "size": (640, 480)})
 picam2.configure(config)
 picam2.start()
+
+#set LEDs 
+leds = LEDManager()
+leds.clear()
 
 # FPS Calculation variables
 p_time = 0
@@ -82,22 +98,92 @@ with mp_pose.Pose(min_detection_confidence=0.5, min_tracking_confidence=0.5, mod
                 cv2.putText(frame, f"FPS: {int(fps)}", (500, 30), 
                            cv2.FONT_HERSHEY_SIMPLEX, 0.7, (0,0, 255), 2)
 
-                # 3. Progress Bar & Angle
+                # 3. Progress Bar & Angle + sounds
                 if angle is not None:
+                    #on screen progress bar
                     draw_progress_bar(frame, angle, current_exercise)
-
-            # Key Controls
+                    
+                    #physical LED update
+                    per = np.interp(angle, (current_exercise.peak_thresh, current_exercise.rest_thresh), (100,0))
+                    
+                    leds.update_bar(per)
+                    leds.update_reps(current_exercise.reps)
+                if current_exercise.reps > previous_reps:
+                    # Check if it's the 8th nultiple rep
+                    if current_exercise.reps % 8 == 0 and current_exercise.reps > 0:
+                        sound_manager.chimes.play() 
+                    else:
+                        sound_manager.rep_beep.play()
+                    
+                    # Update tracker
+                    previous_reps = current_exercise.reps
+                    
+                    
+            ######## Key Controls #######
             key = cv2.waitKey(1) & 0xFF
             if key == ord('1'):
+                # END current session
+                session_end = datetime.now()
+                previous_reps = 0;
+
+                insert_session(
+                    exercise = current_exercise.name,
+                    reps = current_exercise.reps,
+                    sets = 1, # only one for now
+                    date = session_start.strftime("%Y-%m-%d"), 
+                    #strftime converts datetime to string to match the SQLite storage format
+                    start_time = session_start.strftime("%H:%M:%S"),
+                    end_time = session_end.strftime("%H:%M:%S")
+                )
+                
                 current_exercise = load_exercise("squat")
                 current_exercise.reps = 0 
             elif key == ord('2'):
+                # END current session
+                session_end = datetime.now()
+                previous_reps = 0;
+
+                insert_session(
+                    exercise = current_exercise.name,
+                    reps = current_exercise.reps,
+                    sets = 1,
+                    date = session_start.strftime("%Y-%m-%d"),
+                    start_time = session_start.strftime("%H:%M:%S"),
+                    end_time = session_end.strftime("%H:%M:%S")
+                )
+
+                # START new session
                 current_exercise = load_exercise("curl_right")
-                current_exercise.reps = 0
+                session_start = datetime.now()
+
             elif key == ord('3'):
+                # END current session
+                session_end = datetime.now()
+                previous_reps = 0;
+
+                insert_session(
+                    exercise = current_exercise.name,
+                    reps = current_exercise.reps,
+                    sets = 1,
+                    date = session_start.strftime("%Y-%m-%d"),
+                    start_time = session_start.strftime("%H:%M:%S"),
+                    end_time = session_end.strftime("%H:%M:%S")
+                )
+                
                 current_exercise = load_exercise("curl_left")
                 current_exercise.reps = 0
             elif key == 27: # ESC
+                session_end = datetime.now()
+                leds.clear()
+
+                insert_session(
+                    exercise=current_exercise.name,
+                    reps=current_exercise.reps,
+                    sets=1,
+                    date=session_start.strftime("%Y-%m-%d"),
+                    start_time=session_start.strftime("%H:%M:%S"),
+                    end_time=session_end.strftime("%H:%M:%S")
+                )
                 break
             
             # Show Feed
@@ -105,6 +191,8 @@ with mp_pose.Pose(min_detection_confidence=0.5, min_tracking_confidence=0.5, mod
 
         except Exception as e:
             print(f"Error: {e}")
+            leds.clear() #turn off leds if crash
+            pygame.quit() #turn off audio manager
             break
 
 cv2.destroyAllWindows()

@@ -136,6 +136,7 @@ with mp_pose.Pose(min_detection_confidence=0.5, min_tracking_confidence=0.5, mod
                     end_time = session_end.strftime("%H:%M:%S")
                 )
                 
+                sound_manager.squat_instruct.play()                
                 current_exercise = load_exercise("squat")
                 current_exercise.reps = 0 
             elif key == ord('2'):
@@ -153,6 +154,7 @@ with mp_pose.Pose(min_detection_confidence=0.5, min_tracking_confidence=0.5, mod
                 )
 
                 # START new session
+                sound_manager.rCurl_instruct.play()
                 current_exercise = load_exercise("curl_right")
                 session_start = datetime.now()
 

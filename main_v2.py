@@ -28,7 +28,7 @@ session_start = datetime.now()
 
 # Setup Camera (RPi)
 picam2 = Picamera2()
-config = picam2.create_preview_configuration(main={"format": "BGR888", "size": (640, 480)})
+config = picam2.create_preview_configuration(main={"format": "RGB888", "size": (640, 480)})
 picam2.configure(config)
 picam2.start()
 
@@ -71,10 +71,9 @@ with mp_pose.Pose(min_detection_confidence=0.5, min_tracking_confidence=0.5, mod
             p_time = c_time
 
             # MediaPipe Processing
-            rgb = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
-            rgb.flags.writeable = False 
-            results = pose.process(rgb)
-            rgb.flags.writeable = True
+            frame.flags.writeable = False 
+            results = pose.process(frame)
+            frame.flags.writeable = True
 
             # Draw Landmarks
             if results.pose_landmarks:

@@ -39,6 +39,9 @@ leds.clear()
 # FPS Calculation variables
 p_time = 0
 
+### SET THRESHOLD FOR LANDMARK DISPLAY
+landmark_vis_thresh = 0.7
+
 def draw_progress_bar(image, angle, ex_class):
     # Interpolate angle to bar height (normalized 0 to 1)
     # Mapping: Rest Angle (0%) -> Peak Angle (100%)
@@ -77,14 +80,13 @@ with mp_pose.Pose(min_detection_confidence=0.5, min_tracking_confidence=0.5, mod
 
             # Draw Landmarks
             if results.pose_landmarks:
-                mp_draw.draw_landmarks(frame, results.pose_landmarks, mp_pose.POSE_CONNECTIONS)
                 
                 # Logic Update
                 angle = current_exercise.update(results.pose_landmarks.landmark)
 
                 # UI Overlay
                 # 1. Info Box Background
-                cv2.rectangle(frame, (0,0), (250, 150), (245, 117, 16), -1)
+                cv2.rectangle(frame, (0,0), (180, 170), (245, 117, 16), -1)
                 
                 # 2. Text Data
                 cv2.putText(frame, f"{current_exercise.name}", (10, 30), 
@@ -94,8 +96,32 @@ with mp_pose.Pose(min_detection_confidence=0.5, min_tracking_confidence=0.5, mod
                 cv2.putText(frame, f"Stage: {current_exercise.stage}", (10, 130), 
                            cv2.FONT_HERSHEY_SIMPLEX, 0.7, (255,255,255), 2)
                 
-                cv2.putText(frame, f"FPS: {int(fps)}", (500, 30), 
+                cv2.putText(frame, f"FPS: {int(fps)}", (550, 30), 
                            cv2.FONT_HERSHEY_SIMPLEX, 0.7, (0,0, 255), 2)
+                           
+                landmarks = results.pose_landmarks.landmark
+                #check average visibility before displaying on screen to avoid clutter
+                avg_vis = sum(lm.visibility for lm in landmarks) / len(landmarks)
+                if avg_vis > landmark_vis_thresh:
+                    mp_draw.draw_landmarks(frame, results.pose_landmarks, mp_pose.POSE_CONNECTIONS)
+                    #visual indication, that user is in frame or not - maybe ill add audio as well
+                    status_colour = (0, 255, 0) # green = in frame
+                    status_text = "IN FRAME"
+                    cv2.putText(frame, status_text, (10, 160), cv2.FONT_HERSHEY_SIMPLEX, 0.7, status_colour,2)
+                else:
+                    status_colour = (0, 0, 255) # red = not in framee
+                    status_text = "STEP BACK AND CENTER YOURSELF"
+                    cv2.putText(frame, status_text, (40, 240), cv2.FONT_HERSHEY_SIMPLEX, 1, status_colour,3)
+                
+            
+                           
+                ##debugg temporary for landmark detection
+                ''' 
+                landmarks = results.pose_landmarks.landmark
+                hip_vis = landmarks[mp_pose.PoseLandmark.LEFT_KNEE.value].visibility
+                cv2.putText(frame, f"Hip knee: {hip_vis:.2f}", (10, 160),
+                    cv2.FONT_HERSHEY_SIMPLEX, 0.6, (255,255,255), 2)
+                '''
 
                 # 3. Progress Bar & Angle + sounds
                 if angle is not None:
@@ -193,7 +219,7 @@ with mp_pose.Pose(min_detection_confidence=0.5, min_tracking_confidence=0.5, mod
         except Exception as e:
             print(f"Error: {e}")
             leds.clear() #turn off leds if crash
-            pygame.quit() #turn off audio manager
+            sound_manager.sound_quit() #turn off audio manager
             break
 
 cv2.destroyAllWindows()

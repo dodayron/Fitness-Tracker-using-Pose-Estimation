@@ -3,9 +3,10 @@
     "name": "Squat",
     "angle_points": ["HIP", "KNEE", "ANKLE"],
     "sides": ["left", "right"],
+    "direction": "decrease",
     "thresholds": {
-      "rest": 160,
-      "peak": 90
+    "rest": 160,
+    "peak": 90
     }
   },
 
@@ -13,6 +14,7 @@
     "name": "Right Arm Curl",
     "angle_points": ["SHOULDER", "ELBOW", "WRIST"],
     "sides": ["right"],
+    "direction": "decrease",
     "thresholds": {
       "rest": 160,
       "peak": 45
@@ -23,9 +25,21 @@
     "name": "Left Arm Curl",
     "angle_points": ["SHOULDER", "ELBOW", "WRIST"],
     "sides": ["left"],
+    "direction": "decrease",
     "thresholds": {
       "rest": 160,
       "peak": 45
+    }
+  },
+  
+  "lat_raise_right": {
+    "name": "R Lateral Raise",
+    "angle_points": ["HIP", "SHOULDER", "ELBOW"],
+    "sides": ["right"],
+    "direction": "increase",
+    "thresholds": {
+      "rest": 20,
+      "peak": 90
     }
   }
 }

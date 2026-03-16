@@ -45,11 +45,16 @@ landmark_vis_thresh = 0.7
 def draw_progress_bar(image, angle, ex_class):
     # Interpolate angle to bar height (normalized 0 to 1)
     # Mapping: Rest Angle (0%) -> Peak Angle (100%)
-    per = np.interp(angle, (ex_class.peak_thresh, ex_class.rest_thresh), (100, 0))
-    bar = np.interp(angle, (ex_class.peak_thresh, ex_class.rest_thresh), (100, 400))
+    # if statement to flip np.interp based on direction of exercise
+    if ex_class.direction == "decrease":
+        per = np.interp(angle, (ex_class.peak_thresh, ex_class.rest_thresh), (100, 0))
+        bar = np.interp(angle, (ex_class.peak_thresh, ex_class.rest_thresh), (100, 400))
+    else:
+        per = np.interp(angle, (ex_class.rest_thresh, ex_class.peak_thresh), (0, 100))
+        bar = np.interp(angle, (ex_class.rest_thresh, ex_class.peak_thresh), (400, 100))
     
     # Check if rep target reached for color change
-    color = (0, 255, 255) # Yellow default
+    color = (0, 255, 255) # Yellow 
     if per == 100:
         color = (0, 255, 0) # Green if hit depth
     
@@ -67,7 +72,7 @@ with mp_pose.Pose(min_detection_confidence=0.5, min_tracking_confidence=0.5, mod
         try:
             # Capture frame
             frame = picam2.capture_array()
-            
+
             # FPS Calculation
             c_time = time.time()
             fps = 1 / (c_time - p_time)
@@ -83,8 +88,20 @@ with mp_pose.Pose(min_detection_confidence=0.5, min_tracking_confidence=0.5, mod
                 
                 # Logic Update
                 angle = current_exercise.update(results.pose_landmarks.landmark)
+                           
+                landmarks = results.pose_landmarks.landmark
+                #check average visibility before displaying on screen to avoid clutter
+                avg_vis = sum(lm.visibility for lm in landmarks) / len(landmarks)
+                if avg_vis > landmark_vis_thresh:
+                    mp_draw.draw_landmarks(frame, results.pose_landmarks, mp_pose.POSE_CONNECTIONS)
+                    
+                
+            # Flip AFTER processing for display only
+            frame = cv2.flip(frame, 1)
+                
 
-                # UI Overlay
+            ### UI Overlay ### (if landmarks detected)
+            if results.pose_landmarks:
                 # 1. Info Box Background
                 cv2.rectangle(frame, (0,0), (180, 170), (245, 117, 16), -1)
                 
@@ -98,38 +115,24 @@ with mp_pose.Pose(min_detection_confidence=0.5, min_tracking_confidence=0.5, mod
                 
                 cv2.putText(frame, f"FPS: {int(fps)}", (550, 30), 
                            cv2.FONT_HERSHEY_SIMPLEX, 0.7, (0,0, 255), 2)
-                           
-                landmarks = results.pose_landmarks.landmark
-                #check average visibility before displaying on screen to avoid clutter
-                avg_vis = sum(lm.visibility for lm in landmarks) / len(landmarks)
-                if avg_vis > landmark_vis_thresh:
-                    mp_draw.draw_landmarks(frame, results.pose_landmarks, mp_pose.POSE_CONNECTIONS)
-                    #visual indication, that user is in frame or not - maybe ill add audio as well
-                    status_colour = (0, 255, 0) # green = in frame
-                    status_text = "IN FRAME"
-                    cv2.putText(frame, status_text, (10, 160), cv2.FONT_HERSHEY_SIMPLEX, 0.7, status_colour,2)
-                else:
-                    status_colour = (0, 0, 255) # red = not in framee
-                    status_text = "STEP BACK AND CENTER YOURSELF"
-                    cv2.putText(frame, status_text, (40, 240), cv2.FONT_HERSHEY_SIMPLEX, 1, status_colour,3)
-                
-            
-                           
-                ##debugg temporary for landmark detection
-                ''' 
-                landmarks = results.pose_landmarks.landmark
-                hip_vis = landmarks[mp_pose.PoseLandmark.LEFT_KNEE.value].visibility
-                cv2.putText(frame, f"Hip knee: {hip_vis:.2f}", (10, 160),
-                    cv2.FONT_HERSHEY_SIMPLEX, 0.6, (255,255,255), 2)
-                '''
 
-                # 3. Progress Bar & Angle + sounds
+                # 3. In frame or not
+                if avg_vis > landmark_vis_thresh:
+                    cv2.putText(frame, "IN FRAME" , (10, 160), cv2.FONT_HERSHEY_SIMPLEX, 0.7, (0,255,0) ,2)
+                else:
+                    cv2.putText(frame, "STEP BACK AND CENTER YOURSELF" , (40, 240), cv2.FONT_HERSHEY_SIMPLEX, 1, (0,0,255) ,3)
+    
+                
+                # 4. Progress Bar & Angle + sounds
                 if angle is not None:
                     #on screen progress bar
                     draw_progress_bar(frame, angle, current_exercise)
-                    
-                    #physical LED update
-                    per = np.interp(angle, (current_exercise.peak_thresh, current_exercise.rest_thresh), (100,0))
+                    if current_exercise.direction == "decrease":
+                        #physical LED update
+                        per = np.interp(angle, (current_exercise.peak_thresh, current_exercise.rest_thresh), (100,0))
+                    else:
+                        per = np.interp(angle, (current_exercise.rest_thresh, current_exercise.peak_thresh), (0,100))
+
                     
                     leds.update_bar(per)
                     leds.update_reps(current_exercise.reps)
@@ -143,6 +146,22 @@ with mp_pose.Pose(min_detection_confidence=0.5, min_tracking_confidence=0.5, mod
                     # Update tracker
                     previous_reps = current_exercise.reps
                     
+                    
+                '''##debugg temporary for landmark detection
+                if results.pose_landmarks:
+                    landmarks = results.pose_landmarks.landmark
+                    shoulder = landmarks[mp_pose.PoseLandmark.RIGHT_SHOULDER.value]
+                    elbow = landmarks[mp_pose.PoseLandmark.RIGHT_ELBOW.value]
+                    wrist = landmarks[mp_pose.PoseLandmark.RIGHT_WRIST.value]
+                    cv2.putText(frame, f"S:{shoulder.y:.2f} E:{elbow.y:.2f} W:{wrist.y:.2f}",
+                        (10, 200), cv2.FONT_HERSHEY_SIMPLEX, 0.6, (255,255,255), 2)
+                    if angle is not None:
+                        cv2.putText(frame, f"Angle: {int(angle)}", 
+                            (10, 230), cv2.FONT_HERSHEY_SIMPLEX, 0.6, (255,255,0), 2)
+                    # also show the arm_raised check result directly
+                    cv2.putText(frame, f"E<S: {elbow.y < shoulder.y} | W>=E-0.05: {wrist.y >= elbow.y - 0.05}",
+                        (10, 260), cv2.FONT_HERSHEY_SIMPLEX, 0.5, (255,255,255), 1)
+                '''
                     
             ######## Key Controls #######
             key = cv2.waitKey(1) & 0xFF
@@ -199,6 +218,26 @@ with mp_pose.Pose(min_detection_confidence=0.5, min_tracking_confidence=0.5, mod
                 
                 current_exercise = load_exercise("curl_left")
                 current_exercise.reps = 0
+                
+            elif key == ord('4'):
+                # END current session
+                session_end = datetime.now()
+                previous_reps = 0;
+
+                insert_session(
+                    exercise = current_exercise.name,
+                    reps = current_exercise.reps,
+                    sets = 1,
+                    date = session_start.strftime("%Y-%m-%d"),
+                    start_time = session_start.strftime("%H:%M:%S"),
+                    end_time = session_end.strftime("%H:%M:%S")
+                )
+                
+                current_exercise = load_exercise("lat_raise_right")
+                current_exercise.reps = 0
+                
+                
+                
             elif key == 27: # ESC
                 session_end = datetime.now()
                 leds.clear()
@@ -213,7 +252,7 @@ with mp_pose.Pose(min_detection_confidence=0.5, min_tracking_confidence=0.5, mod
                 )
                 break
             
-            # Show Feed
+            # Flip and Show Feed
             cv2.imshow("RPi Fitness Tracker V2", frame)
 
         except Exception as e:

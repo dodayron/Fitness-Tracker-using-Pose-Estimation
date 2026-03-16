@@ -19,7 +19,7 @@ class LEDManager:
         self.last_bar_count = -1   # avoids redundant bar rewrites
         self.last_rep_count = -1   # avoids redundant rep rewrites
 
-    # --- STRIP 1: Progress Bar ---
+    # STRIP 1: Progress Bar
     def update_bar(self, percentage):
         led2light = int((percentage / 100) * self.num_pixels)
         led2light = max(0, min(led2light, self.num_pixels))
@@ -35,21 +35,20 @@ class LEDManager:
 
         self.bar_pixels.show()
 
-    # --- STRIP 2: Rep Counter ---
+    # STRIP 2: Rep Counter
     def update_reps(self, rep_count):
-        rep_count = max(0, min(rep_count, self.num_pixels))
-
-        if rep_count == self.last_rep_count:
+        display_count = rep_count % self.num_pixels # remainder of count / 8
+        if display_count == self.last_rep_count:
             return
 
-        self.last_rep_count = rep_count
+        self.last_rep_count = display_count
 
-        if rep_count == self.num_pixels:
+        if display_count == 0 and rep_count > 0: # full set complete
             self._rainbow_complete()  # celebrate!
-            self.last_rep_count = self.num_pixels  # reset counter
+            self.last_rep_count = 0  # reset counter
         else:
             for i in range(self.num_pixels):
-                self.rep_pixels[i] = (0, 255, 0) if i < rep_count else (0, 0, 0)
+                self.rep_pixels[i] = (0, 255, 0) if i < display_count else (0, 0, 0)
             self.rep_pixels.show()
 
     def _rainbow_complete(self):
@@ -63,11 +62,11 @@ class LEDManager:
             (148, 0, 211),   # Violet
             (255, 20, 147),  # Pink
         ]
-        for _ in range(3):  # flash 3 times
+        for _ in range(2):  # flash 2 times
             for color in rainbow_colors:
                 self.rep_pixels.fill(color)
                 self.rep_pixels.show()
-                time.sleep(0.07)
+                time.sleep(0.05)
         self.clear()
 
     # --- Clear Both Strips ---

@@ -44,8 +44,8 @@ class Exercise:
                 p2 = self._get_point(landmarks, side, self.angle_points[1])
                 p3 = self._get_point(landmarks, side, self.angle_points[2])
 
-                # calc if landmarks pass threshold
-                if min (p1.visibility, p2.visibility, p3.visibility) < vis_thresh:
+                # calc if landmarks pass threshold, this should check the max for decrease and min for increase exercises
+                if max (p1.visibility, p2.visibility, p3.visibility) < vis_thresh:
                         continue
 
                 angles.append(self._calculate_angle(p1, p2, p3))

@@ -22,7 +22,7 @@ class LEDManager:
     # STRIP 1: Progress Bar
     def update_bar(self, percentage):
         led2light = int((percentage / 100) * self.num_pixels)
-        led2light = max(0, min(led2light, self.num_pixels))
+        led2light = max(0, min(led2light, self.num_pixels)) #clamp
 
         if led2light == self.last_bar_count:
             return

@@ -276,7 +276,7 @@ with mp_pose.Pose(min_detection_confidence=0.8, min_tracking_confidence=0.5, mod
      #       cv2.setWindowProperty("RPi Fitness Tracker V2", cv2.WND_PROP_FULLSCREEN, cv2.WINDOW_FULLSCREEN)
             
             #screenshot
-            screenshots.update(frame)
+            screenshots.update(frame, key)
             
         except Exception as e:
             print(f"Error: {e}")
